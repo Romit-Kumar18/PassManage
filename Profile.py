@@ -14,10 +14,15 @@ def saveprofile(userid,passwd):
         dbfile.truncate()
 
 def verifypass(userid,passwd):
+    verification=False
     with open('Profiles.json','r') as dbfile:
         profiles=json.load(dbfile)
-        hashed_passwd=profiles[userid]
-        hashed_passwd = base64.b64decode(hashed_passwd.encode('utf-8'))
-        verification=ph.verify(passwd,hashed_passwd)
+        try:
+            hashed_passwd=profiles[userid]
+            hashed_passwd = base64.b64decode(hashed_passwd.encode('utf-8'))
+            verification=ph.verify(passwd,hashed_passwd)
+        except KeyError:
+            print("User does not exist")
     dbfile.close()
     return verification
+verifypass("Name2","p")
