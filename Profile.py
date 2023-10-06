@@ -18,7 +18,6 @@ def save_profile(userid,passwd):
         except json.JSONDecodeError:
             profiles={}
         passwd_and_key=[base64.b64encode(hashed_passwd).decode('utf-8'),base64.b64encode(key).decode('utf-8')]
-        print(passwd_and_key)
         profiles[userid]=passwd_and_key
         dbfile.seek(0)
         json.dump(profiles, dbfile, indent=2)
@@ -35,7 +34,6 @@ def verify_profile(userid,passwd):
             bpasswd=passwd.encode('utf-8')
             if bcrypt.checkpw(bpasswd,hashed_passwd):
                 verification=True
-                print("True")
             return verification
         except (KeyError,json.JSONDecodeError):
             print("User does not exist or JSON decode error")
@@ -56,8 +54,9 @@ def passfile_create(userid):
         passwds={}
         json.dump(passwds,psfile,indent=2)
 
-def passfile_store(userid,label,stored_passwd,key):
+def passfile_store(userid,label,stored_passwd):
     try:
+        key=retrieve_key(userid)
         with open(f'ProfilePasswords/{userid}.json','r+') as psfile:
             encrypted_passwd=EncryptDecrypt.encrypt(stored_passwd,key)
             stored_passwds=json.load(psfile)
@@ -68,3 +67,18 @@ def passfile_store(userid,label,stored_passwd,key):
             psfile.truncate()
     except FileNotFoundError:
         print("User does not exist")
+
+def passfile_retrieve(userid,label):
+    try:
+        key=retrieve_key(userid)
+        with open(f'ProfilePasswords/{userid}.json','r') as psfile:
+            try:
+                encrypted_passwds=json.load(psfile)
+                encrypted_passwd_64=encrypted_passwds[label]
+                encrypted_passwd=base64.b64decode(encrypted_passwd_64.encode('utf-8'))
+                decrypted_passwd=EncryptDecrypt.decrypt(encrypted_passwd,key)
+                return decrypted_passwd
+            except (KeyError,json.JSONDecodeError):
+                print("Label does not exist JSON decode error")
+    except FileNotFoundError:
+        print("User file does not exist")
