@@ -1,11 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-import json
-import base64
-import bcrypt
 import pyperclip
-from Profile import verify_profile,passfile_store,passfile_retrieve,save_profile
-from EncryptDecrypt import generate_key, encrypt, decrypt
+from Profile import verify_profile, passfile_store, passfile_retrieve, save_profile
 from PGen import random_generation
 
 
@@ -19,17 +15,22 @@ class PasswordManagerApp(tk.Tk):
 
         # Create and add tabs
         self.signup_tab = SignupTab(self.notebook)
-        self.login_tab = LoginTab(self.notebook)
+        self.login_tab = LoginTab(self.notebook, self)
         self.generate_tab = GenerateTab(self.notebook)
-        self.password_tab = PasswordTab(self.notebook)
+        self.password_tab = PasswordTab(self.notebook, self)
 
         self.notebook.add(self.signup_tab, text="Sign Up")
         self.notebook.add(self.login_tab, text="Log In")
         self.notebook.add(self.generate_tab, text="Generate Password")
         self.notebook.add(self.password_tab, text="Password Manager")
-        
+
+        self.current_user = None  # To store the current user ID
 
         self.notebook.pack(expand=True, fill="both")
+
+    def show_password_tab(self, user_id):
+        self.current_user = user_id
+        self.notebook.select(self.password_tab)
 
 
 class SignupTab(tk.Frame):
@@ -60,9 +61,9 @@ class SignupTab(tk.Frame):
 
 
 class LoginTab(tk.Frame):
-    def __init__(self, parent):
+    def __init__(self, parent, app):
         super().__init__(parent)
-
+        self.app = app  # Reference to the main app
         self.user_label = ttk.Label(self, text="Username:")
         self.user_label.pack(pady=10)
 
@@ -83,14 +84,16 @@ class LoginTab(tk.Frame):
         passwd = self.pass_entry.get()
 
         if verify_profile(user_id, passwd):
+            self.app.show_password_tab(user_id)
             messagebox.showinfo("Log In", "Login successful!")
         else:
             messagebox.showerror("Log In", "Login failed!")
 
 
 class PasswordTab(tk.Frame):
-    def __init__(self, parent):
+    def __init__(self, parent, app):
         super().__init__(parent)
+        self.app = app  # Reference to the main app
 
         self.label_entry = ttk.Entry(self)
         self.label_entry.pack(pady=10)
@@ -105,24 +108,32 @@ class PasswordTab(tk.Frame):
         self.retrieve_button.pack(pady=10)
 
     def save_password(self):
-        user_id = self.label_entry.get()
-        label = self.label_entry.get()
-        stored_passwd = self.password_entry.get()
+        if self.app.current_user:
+            user_id = self.app.current_user
+            label = self.label_entry.get()
+            stored_passwd = self.password_entry.get()
 
-        passfile_store(user_id, label, stored_passwd)
-        messagebox.showinfo("Password Saved", "Password saved successfully!")
+            passfile_store(user_id, label, stored_passwd)
+            messagebox.showinfo("Password Saved", "Password saved successfully!")
+        else:
+            messagebox.showerror("Error", "Please log in before saving a password!")
 
     def retrieve_password(self):
-        user_id = self.label_entry.get()
-        label = self.label_entry.get()
+        if self.app.current_user:
+            user_id = self.app.current_user
+            label = self.label_entry.get()
 
-        retrieved_password = passfile_retrieve(user_id, label)
-        messagebox.showinfo("Retrieved Password", f"Retrieved Password: {retrieved_password}")
+            retrieved_password = passfile_retrieve(user_id, label)
+            pyperclip.copy(retrieved_password)
+            messagebox.showinfo("Retrieved Password", "Password copied to clipboard!")
+        else:
+            messagebox.showerror("Error", "Please log in before retrieving a password!")
 
 
 class GenerateTab(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
+        self.app = parent.winfo_toplevel()
 
         self.length_label = ttk.Label(self, text="Password Length:")
         self.length_label.pack(pady=10)
@@ -156,10 +167,15 @@ class GenerateTab(tk.Frame):
         Nchoice = self.number_var.get()
         Schoice = self.symbol_var.get()
 
-        password = random_generation(length, Uchoice, Lchoice, Nchoice, Schoice)
-        pyperclip.copy(password)
-        messagebox.showinfo("Copy to Clipboard", "Password copied to clipboard!")
-
+        if self.app.current_user:
+            password = random_generation(length, Uchoice, Lchoice, Nchoice, Schoice)
+            if password:
+                pyperclip.copy(password)
+                messagebox.showinfo("Copy to Clipboard", "Password copied to clipboard!")
+            else:
+                messagebox.showerror("Error", "Password generation failed!")
+        else:
+            messagebox.showerror("Error", "Please log in before generating a password!")
 
 
 if __name__ == "__main__":
