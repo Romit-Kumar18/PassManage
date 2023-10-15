@@ -1,65 +1,167 @@
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import ttk, messagebox
+import json
+import base64
+import bcrypt
+import pyperclip
+from Profile import verify_profile,passfile_store,passfile_retrieve,save_profile
+from EncryptDecrypt import generate_key, encrypt, decrypt
+from PGen import random_generation
 
-class PasswordManagerGUI:
-    def __init__(self, master):
-        self.master = master
-        self.master.title("Password Manager")
 
-        self.user_id_label = tk.Label(master, text="User ID:")
-        self.user_id_label.pack()
+class PasswordManagerApp(tk.Tk):
+    def __init__(self):
+        super().__init__()
 
-        self.user_id_entry = tk.Entry(master)
-        self.user_id_entry.pack()
+        self.title("Password Manager App")
 
-        self.password_label = tk.Label(master, text="Password:")
-        self.password_label.pack()
+        self.notebook = ttk.Notebook(self)
 
-        self.password_entry = tk.Entry(master, show="*")
-        self.password_entry.pack()
+        # Create and add tabs
+        self.signup_tab = SignupTab(self.notebook)
+        self.login_tab = LoginTab(self.notebook)
+        self.generate_tab = GenerateTab(self.notebook)
+        self.password_tab = PasswordTab(self.notebook)
 
-        self.login_button = tk.Button(master, text="Login", command=self.login)
-        self.login_button.pack()
+        self.notebook.add(self.signup_tab, text="Sign Up")
+        self.notebook.add(self.login_tab, text="Log In")
+        self.notebook.add(self.generate_tab, text="Generate Password")
+        self.notebook.add(self.password_tab, text="Password Manager")
+        
 
-        self.label_entry = tk.Entry(master)
-        self.label_entry.pack()
+        self.notebook.pack(expand=True, fill="both")
 
-        self.password_to_save_entry = tk.Entry(master, show="*")
-        self.password_to_save_entry.pack()
 
-        self.save_button = tk.Button(master, text="Save Password", command=self.save_password)
-        self.save_button.pack()
+class SignupTab(tk.Frame):
+    def __init__(self, parent):
+        super().__init__(parent)
 
-        self.retrieve_button = tk.Button(master, text="Retrieve Password", command=self.retrieve_password)
-        self.retrieve_button.pack()
+        self.user_label = ttk.Label(self, text="Username:")
+        self.user_label.pack(pady=10)
+
+        self.user_entry = ttk.Entry(self)
+        self.user_entry.pack(pady=10)
+
+        self.pass_label = ttk.Label(self, text="Password:")
+        self.pass_label.pack(pady=10)
+
+        self.pass_entry = ttk.Entry(self, show="*")
+        self.pass_entry.pack(pady=10)
+
+        self.signup_button = ttk.Button(self, text="Sign Up", command=self.signup)
+        self.signup_button.pack(pady=20)
+
+    def signup(self):
+        user_id = self.user_entry.get()
+        passwd = self.pass_entry.get()
+
+        save_profile(user_id, passwd)
+        messagebox.showinfo("Sign Up", "Sign Up successful!")
+
+
+class LoginTab(tk.Frame):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+        self.user_label = ttk.Label(self, text="Username:")
+        self.user_label.pack(pady=10)
+
+        self.user_entry = ttk.Entry(self)
+        self.user_entry.pack(pady=10)
+
+        self.pass_label = ttk.Label(self, text="Password:")
+        self.pass_label.pack(pady=10)
+
+        self.pass_entry = ttk.Entry(self, show="*")
+        self.pass_entry.pack(pady=10)
+
+        self.login_button = ttk.Button(self, text="Log In", command=self.login)
+        self.login_button.pack(pady=20)
 
     def login(self):
-        user_id = self.user_id_entry.get()
-        password = self.password_entry.get()
+        user_id = self.user_entry.get()
+        passwd = self.pass_entry.get()
 
-        # Implement login logic and retrieve encryption key
+        if verify_profile(user_id, passwd):
+            messagebox.showinfo("Log In", "Login successful!")
+        else:
+            messagebox.showerror("Log In", "Login failed!")
 
-        messagebox.showinfo("Login", "Login successful!")
+
+class PasswordTab(tk.Frame):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+        self.label_entry = ttk.Entry(self)
+        self.label_entry.pack(pady=10)
+
+        self.password_entry = ttk.Entry(self, show="*")
+        self.password_entry.pack(pady=10)
+
+        self.save_button = ttk.Button(self, text="Save Password", command=self.save_password)
+        self.save_button.pack(pady=10)
+
+        self.retrieve_button = ttk.Button(self, text="Retrieve Password", command=self.retrieve_password)
+        self.retrieve_button.pack(pady=10)
 
     def save_password(self):
+        user_id = self.label_entry.get()
         label = self.label_entry.get()
-        password_to_save = self.password_to_save_entry.get()
+        stored_passwd = self.password_entry.get()
 
-        # Implement save password logic
-
+        passfile_store(user_id, label, stored_passwd)
         messagebox.showinfo("Password Saved", "Password saved successfully!")
 
     def retrieve_password(self):
+        user_id = self.label_entry.get()
         label = self.label_entry.get()
 
-        # Implement retrieve password logic
-
-        retrieved_password = "Your retrieved password"  # Replace with actual logic
-
+        retrieved_password = passfile_retrieve(user_id, label)
         messagebox.showinfo("Retrieved Password", f"Retrieved Password: {retrieved_password}")
 
 
+class GenerateTab(tk.Frame):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+        self.length_label = ttk.Label(self, text="Password Length:")
+        self.length_label.pack(pady=10)
+
+        self.length_entry = ttk.Entry(self)
+        self.length_entry.pack(pady=10)
+
+        self.uppercase_var = tk.IntVar()
+        self.uppercase_check = ttk.Checkbutton(self, text="Uppercase", variable=self.uppercase_var)
+        self.uppercase_check.pack(pady=5)
+
+        self.lowercase_var = tk.IntVar()
+        self.lowercase_check = ttk.Checkbutton(self, text="Lowercase", variable=self.lowercase_var)
+        self.lowercase_check.pack(pady=5)
+
+        self.number_var = tk.IntVar()
+        self.number_check = ttk.Checkbutton(self, text="Numbers", variable=self.number_var)
+        self.number_check.pack(pady=5)
+
+        self.symbol_var = tk.IntVar()
+        self.symbol_check = ttk.Checkbutton(self, text="Symbols", variable=self.symbol_var)
+        self.symbol_check.pack(pady=5)
+
+        self.generate_button = ttk.Button(self, text="Generate Password", command=self.generate_and_copy)
+        self.generate_button.pack(pady=10)
+
+    def generate_and_copy(self):
+        length = int(self.length_entry.get())
+        Uchoice = self.uppercase_var.get()
+        Lchoice = self.lowercase_var.get()
+        Nchoice = self.number_var.get()
+        Schoice = self.symbol_var.get()
+
+        password = random_generation(length, Uchoice, Lchoice, Nchoice, Schoice)
+        pyperclip.copy(password)
+        messagebox.showinfo("Copy to Clipboard", "Password copied to clipboard!")
+
+
+
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = PasswordManagerGUI(root)
-    root.mainloop()
+    app = PasswordManagerApp()
+    app.mainloop()
