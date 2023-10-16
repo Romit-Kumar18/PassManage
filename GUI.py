@@ -21,8 +21,8 @@ class PasswordManagerApp(tk.Tk):
 
         self.notebook.add(self.signup_tab, text="Sign Up")
         self.notebook.add(self.login_tab, text="Log In")
-        self.notebook.add(self.generate_tab, text="Generate Password")
         self.notebook.add(self.password_tab, text="Password Manager")
+        self.notebook.add(self.generate_tab, text="Generate Password")
 
         self.current_user = None  # To store the current user ID
 
@@ -31,6 +31,8 @@ class PasswordManagerApp(tk.Tk):
     def show_password_tab(self, user_id):
         self.current_user = user_id
         self.notebook.select(self.password_tab)
+    def show_login_tab(self):
+        self.notebook.select(self.login_tab)
 
 
 class SignupTab(tk.Frame):
@@ -58,6 +60,10 @@ class SignupTab(tk.Frame):
 
         save_profile(user_id, passwd)
         messagebox.showinfo("Sign Up", "Sign Up successful!")
+
+        # After successful signup, switch to the login tab
+        app = self.winfo_toplevel()  # Access the top-level window
+        app.show_login_tab()
 
 
 class LoginTab(tk.Frame):
