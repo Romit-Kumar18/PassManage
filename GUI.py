@@ -4,7 +4,6 @@ import pyperclip
 from Profile import verify_profile, passfile_store, passfile_retrieve, save_profile
 from PGen import random_generation
 
-
 class PasswordManagerApp(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -87,12 +86,14 @@ class LoginTab(tk.Frame):
         user_id = self.user_entry.get()
         passwd = self.pass_entry.get()
 
-        if verify_profile(user_id, passwd):
-            self.app.show_password_tab(user_id)
-            messagebox.showinfo("Log In", "Login successful!")
-        else:
-            messagebox.showerror("Log In", "Login failed!")
-
+        try:
+            if verify_profile(user_id, passwd):
+                self.app.show_password_tab(user_id)
+                messagebox.showinfo("Log In", "Login successful!")
+            else:
+                messagebox.showerror("Log In", "Incorrect password!")
+        except Exception as e:
+            messagebox.showerror("Log In", str(e))
 
 class PasswordTab(tk.Frame):
     def __init__(self, parent, app):
@@ -128,11 +129,13 @@ class PasswordTab(tk.Frame):
             label = self.label_entry.get()
 
             retrieved_password = passfile_retrieve(user_id, label)
-            pyperclip.copy(retrieved_password)
-            messagebox.showinfo("Retrieved Password", "Password copied to clipboard!")
+            if retrieved_password is None:
+                messagebox.showerror("Retrieve Password", "Password does not exist!")
+            else:
+                pyperclip.copy(retrieved_password)
+                messagebox.showinfo("Retrieved Password", "Password copied to clipboard!")
         else:
             messagebox.showerror("Error", "Please log in before retrieving a password!")
-
 
 class GenerateTab(tk.Frame):
     def __init__(self, parent):
